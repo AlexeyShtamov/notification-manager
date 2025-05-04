@@ -7,11 +7,11 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
-import ru.shtamov.notificationmanager.exception.CustomAuthenticationEntryPoint;
-import ru.shtamov.notificationmanager.user.User;
-import ru.shtamov.notificationmanager.user.UserService;
 
 import java.io.IOException;
 import java.util.List;
@@ -19,25 +19,39 @@ import java.util.List;
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class JwtTokenFilter {
+public class JwtTokenFilter extends OncePerRequestFilter {
 
     private final JwtTokenManager jwtTokenManager;
 
-    public String getLoginFromToken(String authorizationHeaders){
+    @Override
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException, ServletException, IOException {
+        String authorizationHeaders = request.getHeader(HttpHeaders.AUTHORIZATION);
 
-        if (authorizationHeaders == null || !authorizationHeaders.startsWith("Bearer "))
-            throw new CustomAuthenticationEntryPoint("Необходима аутентификация с jwt токеном");
+        if (authorizationHeaders == null || !authorizationHeaders.startsWith("Bearer ")){
+            filterChain.doFilter(request, response);
+            return;
+        }
 
         String jwt = authorizationHeaders.substring(7);
 
-        String loginFromJwt;
+        String roleFromJwt;
         try {
-            loginFromJwt = jwtTokenManager.getLoginFromToken(jwt);
+            roleFromJwt = jwtTokenManager.getRoleFromToken(jwt);
         } catch (Exception e){
             log.info("Ошибка при расшифровке jwt");
-            throw new RuntimeException("Ошибка при расшифровке jwt");
+            filterChain.doFilter(request, response);
+            return;
         }
 
-        return loginFromJwt;
+
+        UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken(
+                null,
+                null,
+                List.of(new SimpleGrantedAuthority(roleFromJwt))
+        );
+
+        SecurityContextHolder.getContext().setAuthentication(token);
+        filterChain.doFilter(request, response);
     }
+
 }

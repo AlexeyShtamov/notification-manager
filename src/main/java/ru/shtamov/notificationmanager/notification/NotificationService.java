@@ -4,8 +4,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import ru.shtamov.notificationmanager.notification.converter.NotificationConverter;
-import ru.shtamov.notificationmanager.user.User;
-import ru.shtamov.notificationmanager.user.UserService;
 
 import java.util.List;
 
@@ -21,14 +19,15 @@ public class NotificationService {
         notificationRepository.save(notificationConverter.toEntity(eventNotification));
     }
 
-    public List<EventNotification> getAllUnread(User user){
+    public List<EventNotification> getAllUnread(String login){
+
         List<EventNotification> eventNotifications = notificationRepository
                 .findAll().stream()
-                .filter(n -> n.getSubscribersLogins().contains(user.getLogin()))
+                .filter(n -> n.getSubscribersLogins().contains(login))
                 .map(notificationConverter::toDomain)
                 .toList();
 
-        log.info("Получен список всех уведомлений для пользователя: {}", user.getLogin());
+        log.info("Получен список всех уведомлений для пользователя: {}", login);
 
         return eventNotifications;
     }

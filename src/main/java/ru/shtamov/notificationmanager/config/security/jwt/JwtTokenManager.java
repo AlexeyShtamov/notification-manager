@@ -13,26 +13,22 @@ import java.util.Date;
 public class JwtTokenManager {
 
     private final Key key;
-    private final long expirationTime;
 
 
-    public JwtTokenManager(@Value("${jwt.key}") String key, @Value("${jwt.expiration-date}")  long expirationTime) {
+    public JwtTokenManager(@Value("${jwt.key}") String key) {
         this.key = Keys.hmacShaKeyFor(key.getBytes());
-        this.expirationTime = expirationTime;
     }
 
-    public String generateToken(String login){
-
-        return Jwts
-                .builder()
-                .subject(login)
-                .signWith(key)
-                .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + expirationTime))
-                .compact();
+    public String getRoleFromToken(String jwt){
+        return Jwts.parser()
+                .verifyWith((SecretKey) key)
+                .build()
+                .parseSignedClaims(jwt)
+                .getPayload()
+                .get("role", String.class);
     }
 
-    public String getLoginFromToken(String jwt){
+    public String getLoginFromToken(String jwt) {
         return Jwts
                 .parser()
                 .verifyWith((SecretKey) key)
